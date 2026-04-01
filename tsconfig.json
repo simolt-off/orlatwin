@@ -25,5 +25,13 @@
     }
   },
   "include": ["src/**/*", "ui/**/*", "extensions/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/agents/forked-subagent.ts",
+    "src/agents/kairos-agent.ts",
+    "src/agents/memory-consolidator.ts",
+    "src/agents/proactive-agent.ts",
+    "src/agents/write-discipliner.ts"
+  ]
 }
