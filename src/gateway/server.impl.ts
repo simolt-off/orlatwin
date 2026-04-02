@@ -22,6 +22,9 @@ import {
 import { formatConfigIssueLines } from "../config/issue-format.js";
 import { applyPluginAutoEnable } from "../config/plugin-auto-enable.js";
 import { resolveMainSessionKey } from "../config/sessions.js";
+import { getKairosEngine } from "../daemon/kairos-daemon.js";
+import { startProactiveMonitor, stopProactiveMonitor } from "../daemon/proactive-monitor.js";
+import { isFlagEnabled } from "../feature-flags/index.js";
 import { clearAgentRunContext, onAgentEvent } from "../infra/agent-events.js";
 import {
   ensureControlUiAssetsBuilt,
@@ -549,6 +552,27 @@ export async function startGatewayServer(
 
   initSubagentRegistry();
   initOrlaFlags();
+
+  // MoltClaw.Twin — Start KAIROS daemon if enabled
+  if (isFlagEnabled("KAIROS_DAEMON")) {
+    try {
+      const _kairos = getKairosEngine({ enabled: true });
+      log.info("gateway: KAIROS daemon started (MoltClaw.Twin)");
+    } catch (err) {
+      log.error("gateway: KAIROS daemon failed to start", { err });
+    }
+  }
+
+  // MoltClaw.Twin — Start Proactive Monitor if enabled
+  if (isFlagEnabled("PROACTIVE_MODE")) {
+    try {
+      await startProactiveMonitor({ enabled: true });
+      log.info("gateway: Proactive Monitor started (MoltClaw.Twin)");
+    } catch (err) {
+      log.error("gateway: Proactive Monitor failed to start", { err });
+    }
+  }
+
   const defaultAgentId = resolveDefaultAgentId(cfgAtStart);
   const defaultWorkspaceDir = resolveAgentWorkspaceDir(cfgAtStart, defaultAgentId);
   const deferredConfiguredChannelPluginIds = minimalTestGateway
@@ -1339,6 +1363,14 @@ export async function startGatewayServer(
       });
       if (diagnosticsEnabled) {
         stopDiagnosticHeartbeat();
+      }
+      // MoltClaw.Twin — Stop daemons
+      if (isFlagEnabled("KAIROS_DAEMON")) {
+        const kairos = getKairosEngine();
+        await kairos?.stop();
+      }
+      if (isFlagEnabled("PROACTIVE_MODE")) {
+        stopProactiveMonitor();
       }
       if (skillsRefreshTimer) {
         clearTimeout(skillsRefreshTimer);
