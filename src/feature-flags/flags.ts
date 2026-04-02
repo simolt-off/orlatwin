@@ -63,6 +63,22 @@ export const AGENCY_TEAMS = Symbol("AGENCY_TEAMS");
 export type AGENCY_TEAMS = typeof AGENCY_TEAMS;
 
 /**
+ * SELF_IMPROVE_DAEMON — monitors skill performance and auto-evolves skills.
+ * When enabled, tracks skill invocation metrics, generates improvement recommendations,
+ * and can automatically apply skill improvements.
+ */
+export const SELF_IMPROVE_DAEMON = Symbol("SELF_IMPROVE_DAEMON");
+export type SELF_IMPROVE_DAEMON = typeof SELF_IMPROVE_DAEMON;
+
+/**
+ * UPSTREAM_WATCHER — monitors upstream sources (GitHub, docs) for updates.
+ * When enabled, watches repositories, documentation sites, and package registries
+ * for new commits, releases, and updates.
+ */
+export const UPSTREAM_WATCHER = Symbol("UPSTREAM_WATCHER");
+export type UPSTREAM_WATCHER = typeof UPSTREAM_WATCHER;
+
+/**
  * UNDERCOVER_MODE — stealth operation without attribution.
  * When enabled, the agent suppresses all identity signals (name, avatar, branding)
  * and operates with minimal footprint metadata.
@@ -139,6 +155,20 @@ export const ALL_FLAG_DEFINITIONS: Record<symbol, FeatureFlagDefinition> = {
       "Enables the agency subsystem: spawn multiple named agents as a team, assign roles (e.g. researcher, reviewer, executor), share a team memory context, and coordinate via structured messaging protocols.",
     risk: "medium",
   },
+  [SELF_IMPROVE_DAEMON]: {
+    name: "SELF_IMPROVE_DAEMON",
+    description: "Self-improvement daemon for skills.",
+    longDescription:
+      "Monitors skill performance metrics (success rate, token usage, invocation frequency) and generates improvement recommendations. Can automatically evolve skills based on performance data.",
+    risk: "low",
+  },
+  [UPSTREAM_WATCHER]: {
+    name: "UPSTREAM_WATCHER",
+    description: "Upstream source watcher.",
+    longDescription:
+      "Monitors GitHub repositories, documentation sites, and package registries for updates. Triggers notifications for new commits, releases, and breaking changes.",
+    risk: "low",
+  },
   [UNDERCOVER_MODE]: {
     name: "UNDERCOVER_MODE",
     description: "Stealth operation without attribution.",
@@ -164,6 +194,8 @@ export const ACTIVE_FLAGS: Set<symbol> = new Set<symbol>([
   SKILL_SCANNER,
   MISSION_CONTROL,
   AGENCY_TEAMS,
+  SELF_IMPROVE_DAEMON,
+  UPSTREAM_WATCHER,
   UNDERCOVER_MODE,
 ]);
 

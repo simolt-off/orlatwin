@@ -24,6 +24,8 @@ import { applyPluginAutoEnable } from "../config/plugin-auto-enable.js";
 import { resolveMainSessionKey } from "../config/sessions.js";
 import { getKairosEngine } from "../daemon/kairos-daemon.js";
 import { startProactiveMonitor, stopProactiveMonitor } from "../daemon/proactive-monitor.js";
+import { getSelfImprovementDaemon } from "../daemon/self-improve-daemon.js";
+import { getUpstreamWatcher } from "../daemon/upstream-watcher.js";
 import { isFlagEnabled } from "../feature-flags/index.js";
 import { clearAgentRunContext, onAgentEvent } from "../infra/agent-events.js";
 import {
@@ -570,6 +572,28 @@ export async function startGatewayServer(
       log.info("gateway: Proactive Monitor started (MoltClaw.Twin)");
     } catch (err) {
       log.error("gateway: Proactive Monitor failed to start", { err });
+    }
+  }
+
+  // MoltClaw.Twin — Start Self-Improvement Daemon if enabled
+  if (isFlagEnabled("SELF_IMPROVE_DAEMON")) {
+    try {
+      const selfImprove = getSelfImprovementDaemon();
+      selfImprove.start();
+      log.info("gateway: Self-Improvement Daemon started (MoltClaw.Twin)");
+    } catch (err) {
+      log.error("gateway: Self-Improvement Daemon failed to start", { err });
+    }
+  }
+
+  // MoltClaw.Twin — Start Upstream Watcher if enabled
+  if (isFlagEnabled("UPSTREAM_WATCHER")) {
+    try {
+      const upstreamWatcher = getUpstreamWatcher();
+      upstreamWatcher.start();
+      log.info("gateway: Upstream Watcher started (MoltClaw.Twin)");
+    } catch (err) {
+      log.error("gateway: Upstream Watcher failed to start", { err });
     }
   }
 
@@ -1371,6 +1395,16 @@ export async function startGatewayServer(
       }
       if (isFlagEnabled("PROACTIVE_MODE")) {
         stopProactiveMonitor();
+      }
+      // MoltClaw.Twin — Stop Self-Improvement Daemon
+      if (isFlagEnabled("SELF_IMPROVE_DAEMON")) {
+        const selfImprove = getSelfImprovementDaemon();
+        selfImprove.stop();
+      }
+      // MoltClaw.Twin — Stop Upstream Watcher
+      if (isFlagEnabled("UPSTREAM_WATCHER")) {
+        const upstreamWatcher = getUpstreamWatcher();
+        upstreamWatcher.stop();
       }
       if (skillsRefreshTimer) {
         clearTimeout(skillsRefreshTimer);

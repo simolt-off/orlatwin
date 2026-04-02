@@ -142,6 +142,30 @@ export const FLAGS = {
     envVar: "ORLA_STRICT_WRITE_ENABLED",
     owner: "orla",
   },
+
+  /**
+   * SELF_IMPROVE_DAEMON — Monitors skill performance and auto-evolves skills
+   * Tracks invocation metrics, generates improvement recommendations.
+   */
+  SELF_IMPROVE_DAEMON: {
+    id: "SELF_IMPROVE_DAEMON",
+    description: "Self-improvement daemon for skills (performance monitoring + auto-evolution)",
+    defaultEnabled: true,
+    envVar: "ORLA_SELF_IMPROVE_ENABLED",
+    owner: "orla",
+  },
+
+  /**
+   * UPSTREAM_WATCHER — Monitors upstream sources (GitHub, docs, packages)
+   * Watches for commits, releases, and updates.
+   */
+  UPSTREAM_WATCHER: {
+    id: "UPSTREAM_WATCHER",
+    description: "Upstream source watcher (GitHub, docs, package registries)",
+    defaultEnabled: true,
+    envVar: "ORLA_UPSTREAM_WATCHER_ENABLED",
+    owner: "orla",
+  },
 } as const satisfies Record<string, FeatureFlag>;
 
 // ─── Flag Resolution ─────────────────────────────────────────────────────────
