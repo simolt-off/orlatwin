@@ -18,6 +18,7 @@
  */
 
 import { EventEmitter } from "node:events";
+import { checkpoint } from "../orla-proactive/checkpoint.js";
 import { registerSubagentRun } from "./subagent-registry.js";
 import {
   type SpawnSubagentParams,
@@ -204,6 +205,22 @@ export class ForkedSubagentHandle<T = unknown> extends EventEmitter {
   // -------------------------------------------------------------------------
 
   async #spawn(): Promise<void> {
+    // MoltClaw.Twin — checkpoint before starting long task
+    try {
+      const checkpointId = await checkpoint(
+        this.options.label ?? "forked-subagent",
+        1,
+        1,
+        `Starting forked subagent: ${this.task.slice(0, 50)}...`,
+        [__filename],
+        "Spawn subagent and wait for completion",
+      );
+      console.debug(`[MoltClaw.Twin] Checkpoint saved: ${checkpointId}`);
+    } catch (err) {
+      console.warn(`[MoltClaw.Twin] Failed to save checkpoint before spawn:`, err);
+      // Don't fail the spawn if checkpointing fails
+    }
+
     const { label, runTimeoutSeconds, cleanup, sandbox, expectsCompletionMessage } = this.options;
 
     const ctx: SpawnSubagentContext = {
@@ -273,6 +290,21 @@ export class ForkedSubagentHandle<T = unknown> extends EventEmitter {
           });
         }
       }, timeoutMs);
+    }
+
+    // MoltClaw.Twin — checkpoint after successful spawn
+    try {
+      const checkpointId = await checkpoint(
+        this.options.label ?? "forked-subagent",
+        2,
+        2,
+        "Spawn completed successfully",
+        [__filename],
+        "Forked subagent running — checkpoint saved",
+      );
+      console.debug(`[MoltClaw.Twin] Spawn checkpoint saved: ${checkpointId}`);
+    } catch (err) {
+      console.warn(`[MoltClaw.Twin] Failed to save spawn checkpoint:`, err);
     }
   }
 
