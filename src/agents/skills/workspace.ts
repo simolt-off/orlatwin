@@ -7,6 +7,7 @@ import {
   type Skill,
 } from "@mariozechner/pi-coding-agent";
 import type { OpenClawConfig } from "../../config/config.js";
+import { getSelfImprovementDaemon } from "../../daemon/self-improve-daemon.js";
 import { isPathInside } from "../../infra/path-guards.js";
 import { createSubsystemLogger } from "../../logging/subsystem.js";
 import { loadEnabledClaudeBundleCommands } from "../../plugins/bundle-commands.js";
@@ -720,7 +721,19 @@ export function loadWorkspaceSkillEntries(
     bundledSkillsDir?: string;
   },
 ): SkillEntry[] {
-  return loadSkillEntries(workspaceDir, opts);
+  const entries = loadSkillEntries(workspaceDir, opts);
+
+  // Record skill invocations (loading counts as an invocation)
+  for (const entry of entries) {
+    try {
+      const daemon = getSelfImprovementDaemon();
+      daemon.recordInvocation(entry.skill.name, true, 0);
+    } catch (error) {
+      // Silently fail - daemon may not be running
+    }
+  }
+
+  return entries;
 }
 
 function resolveUniqueSyncedSkillDirName(base: string, used: Set<string>): string {
