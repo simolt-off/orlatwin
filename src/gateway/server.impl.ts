@@ -555,6 +555,27 @@ export async function startGatewayServer(
   initSubagentRegistry();
   initOrlaFlags();
 
+  // OrlaTwin — Job init promises (collected for awaited execution AFTER cron.start)
+  // We MUST register jobs AFTER cron.start() so the store is already loaded.
+  // Fire-and-forget here would race with cron.start(), causing jobs to be
+  // registered AFTER the initial armTimer call — losing the first fire window.
+  let orlaJobInits: Promise<unknown>[] = [];
+  if (isFlagEnabled("PROACTIVE_MODE")) {
+    const heartbeatJobInit = import("../orla-proactive/jobs-init.js").then(async (m) => {
+      const { initJobsFromHeartbeat } = m;
+      const heartbeatPath = path.join(defaultWorkspaceDir, "HEARTBEAT.md");
+      return initJobsFromHeartbeat(heartbeatPath, cron);
+    });
+    orlaJobInits.push(heartbeatJobInit);
+
+    const kairosJobInit = import("../orla-proactive/kairos-cron.js").then(async (m) => {
+      const { registerOrlaCronJobsAndArmTimer } = m;
+      // cronState is defined below; we store the promise to await after cron.start()
+      return { registerOrlaCronJobsAndArmTimer, mod: m };
+    });
+    orlaJobInits.push(kairosJobInit);
+  }
+
   // MoltClaw.Twin — Start KAIROS daemon if enabled
   if (isFlagEnabled("KAIROS_DAEMON")) {
     try {
@@ -1059,6 +1080,32 @@ export async function startGatewayServer(
 
   if (!minimalTestGateway) {
     void cron.start().catch((err) => logCron.error(`failed to start: ${String(err)}`));
+
+    // OrlaTwin — Await job registration AFTER cron.start() so the store is
+    // loaded and the initial armTimer has fired. Then re-arm for any new jobs.
+    if (isFlagEnabled("PROACTIVE_MODE") && orlaJobInits.length > 0) {
+      for (const initPromise of orlaJobInits) {
+        const result = await initPromise;
+        // kairos-cron init returns { mod } — extract and call the arm-timer variant
+        if (result && typeof result === "object" && "mod" in result) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const mod = (result as any).mod as {
+            registerOrlaCronJobsAndArmTimer: (
+              s: import("../cron/service/state.js").CronServiceState,
+            ) => Promise<unknown>;
+          };
+          if (mod?.registerOrlaCronJobsAndArmTimer) {
+            await mod.registerOrlaCronJobsAndArmTimer(
+              (
+                cronState.cron as unknown as {
+                  state: import("../cron/service/state.js").CronServiceState;
+                }
+              ).state,
+            );
+          }
+        }
+      }
+    }
   }
 
   const stopModelPricingRefresh =

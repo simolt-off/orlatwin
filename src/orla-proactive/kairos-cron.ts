@@ -237,6 +237,26 @@ export async function registerOrlaCronJobs(): Promise<RegisterKairosJobsResult> 
 }
 
 /**
+ * Register ORLA cron jobs AND re-arm the scheduler timer.
+ * Use this when registering jobs AFTER cron.start() has already been called,
+ * since direct store writes bypass the cron.add() → armTimer() pathway.
+ */
+export async function registerOrlaCronJobsAndArmTimer(
+  state: import("../cron/service/state.js").CronServiceState,
+): Promise<RegisterKairosJobsResult> {
+  const result = await registerOrlaCronJobs();
+  if (result.registered.length > 0) {
+    // Re-compute next run times for newly registered jobs and re-arm timer
+    const { recomputeNextRuns } = await import("../cron/service/jobs.js");
+    const { armTimer: armTimerFn } = await import("../cron/service/timer.js");
+    recomputeNextRuns(state);
+    armTimerFn(state);
+    console.debug("[orla-proactive] Timer re-armed after job registration");
+  }
+  return result;
+}
+
+/**
  * Remove all ORLA cron jobs (for cleanup/uninstall).
  */
 export async function deregisterOrlaCronJobs(): Promise<void> {
